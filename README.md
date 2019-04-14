@@ -1,18 +1,30 @@
 # Random GTP proxy
 Playing with AI is too predictable, too hard or maybe too easy?
-This GTP engine distributes `genmove` command between multiple other engines.
+This GTP engine distributes `genmove` command between multiple other engines
+and after that gives analysis of the current position.
 
 Sample configuration:
 ```ini
-# Leela zero with some AmiGo blunders in-between.
+; Engine probabilities:
+; 25% AmiGo
+; 75% GnuGo
+;  0% Leela Zero
+;
+; And after each `genmove` command GnuGo and Leela Zero will analyze current position.
 
 [amigo]
-command=/path/to/amigogtp
+command=amigogtp
 weight=1
 
+[gnugo]
+command=gnugo --mode gtp
+weight=3
+analyze=estimate_score
+
 [leela-zero]
-command=/path/to/leelaz --gtp --weights /path/to/network.gz
-weight=8
+command=leelaz --gtp --weights /path/to/network.gz --noponder --playouts 1
+weight=0
+analyze=lz-analyze
 ```
 
 GTP command:
