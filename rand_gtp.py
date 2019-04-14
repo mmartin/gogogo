@@ -38,7 +38,6 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
             raise gtp_proxy.BackEndError('can\'t launch back end command: %s\n%s' % (e, engine.command), cause = e)
         controller = gtp_controller.Gtp_controller(channel, engine.name)
         self._engines.append((engine, controller))
-        # TODO: fixup supported commands
 
     def run(self):
         self._engines.sort(key = lambda x: x[0].weight)
@@ -46,7 +45,8 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
 
     def pass_command(self, command, args):
         for _, controller in self._engines:
-            self._send_command(controller, command, args)
+            if controller.known_command(command):
+                self._send_command(controller, command, args)
 
     def _send_command(self, controller, command, args = None):
         tmp = self.controller
