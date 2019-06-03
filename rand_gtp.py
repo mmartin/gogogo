@@ -66,7 +66,7 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
         print >>sys.stderr, 'Passing genmove to %s: %s' % (executor[0].name, value)
 
         for engine, controller in self._engines:
-            if controller != executor[1]:
+            if controller != executor[1] and value.lower() != 'resign':
                 self._send_command(controller, 'play', args + [value])
 
             if engine.analyze is not None:
