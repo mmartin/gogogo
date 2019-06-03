@@ -45,8 +45,12 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
 
     def pass_command(self, command, args):
         for _, controller in self._engines:
-            if controller.known_command(command):
-                self._send_command(controller, command, args)
+            # TODO: proper handling of commands which return data
+            # (e.g. final_score, place_free_handicap etc.) and of
+            # commands not supported by all engines.
+            r = self._send_command(controller, command, args)
+            if r:
+                return r
 
     def _send_command(self, controller, command, args = None):
         tmp = self.controller
