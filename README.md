@@ -31,3 +31,11 @@ GTP command:
 ```shell
 /path/to/rand_gtp.py /path/to/config.ini
 ```
+
+# Handicap support for engines whithout it
+This GTP engine adds support for fixed and free handicap for engines which do not support them.
+
+GTP command:
+```shell
+/path/to/handicap_gtp.py <real GTP engine>
+```
