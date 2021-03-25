@@ -2,7 +2,7 @@
 
 import sys, shlex
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from random import random
 from bisect import bisect
 from ConfigParser import ConfigParser
@@ -28,6 +28,8 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
         self.engine.add_command('name', lambda args: 'Random GTP')
         self.engine.add_command('version', lambda args: '0.0')
         self.engine.add_command('genmove', self._handle_genmove)
+        self.engine.add_command('showboard', self._handle_showboard)
+        self.engine.add_command('place_free_handicap', self._handle_place_free_handicap)
 
         self._engines = [(engine, self.controller)]
 
@@ -40,15 +42,17 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
         self._engines.append((engine, controller))
 
     def run(self):
-        self._engines.sort(key = lambda x: x[0].weight)
+        self._engines = OrderedDict([(e[0].name, e) for e in sorted(self._engines, key=lambda x: x[0].weight)])
+
         return super(Rand_GTP, self).run()
 
     def pass_command(self, command, args):
-        for _, controller in self._engines:
+        for engine, controller in self._engines.values():
             # TODO: proper handling of commands which return data
-            # (e.g. final_score, place_free_handicap etc.) and of
-            # commands not supported by all engines.
+            # (e.g. final_score etc.) and of commands not supported by all engines.
+            print >>sys.stderr, engine.name, command, args
             r = self._send_command(controller, command, args)
+
             if r:
                 return r
 
@@ -60,12 +64,16 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
         return value
 
     def _handle_genmove(self, args):
-        executor = weighted_choice(((e[0].weight, e) for e in self._engines))
+        executor = weighted_choice(((e[0].weight, e) for e in self._engines.values()))
+
+        for engine, controller in self._engines.values():
+            print >>sys.stderr, engine.name, 'showboard'
+            print >>sys.stderr, self._send_command(controller, 'showboard', [])
 
         value = self._send_command(executor[1], 'genmove', args)
         print >>sys.stderr, 'Passing genmove to %s: %s' % (executor[0].name, value)
 
-        for engine, controller in self._engines:
+        for engine, controller in self._engines.values():
             if controller != executor[1] and value.lower() != 'resign':
                 self._send_command(controller, 'play', args + [value])
 
@@ -75,10 +83,26 @@ class Rand_GTP(gtp_proxy.Gtp_proxy):
 
         return value
 
+    def _handle_showboard(self, args):
+        for engine, controller in self._engines.values():
+            print >>sys.stderr, 'Showboard from', engine.name
+            print >>sys.stderr, self._send_command(controller, 'showboard', [])
+
+    def _handle_place_free_handicap(self, args):
+        value = None
+        for engine, controller in self._engines.values():
+            if value is None:
+                value = self._send_command(controller, 'place_free_handicap', args).split()
+            else:
+                self._send_command(controller, 'set_free_handicap', value)
+
+        return ' '.join(value)
+
 if __name__ == "__main__":
     conf = ConfigParser()
     conf.read([sys.argv[1]])
     engines = conf.sections()
+    print >>sys.stderr, 'Engines:', engines
 
     def _make_engine(name):
         return Engine(name    = name,
